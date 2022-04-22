@@ -16,11 +16,17 @@ def pull_data(ticker):
     outstandingShares = get_jsonparsed_data(outstandingSharesUrl)
     enterpriseValueUrl = "https://financialmodelingprep.com/api/v3/enterprise-values/" + ticker + "?limit=40&apikey=82e32bddd70d4deecdf507b9a13b2867"
     enterpriseValue = get_jsonparsed_data(enterpriseValueUrl)
+    incomeStatementURl = "https://financialmodelingprep.com/api/v3/income-statement/" + ticker + "?limit=120&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    incomeStatement = get_jsonparsed_data(incomeStatementURl)
+    currentPriceURL = "https://financialmodelingprep.com/api/v3/quote-short/" + ticker + "?apikey=82e32bddd70d4deecdf507b9a13b2867"
+    currentPrice = get_jsonparsed_data(currentPriceURL)
 
     df1 = pd.DataFrame([balanceSheet[0]])
     df2 = pd.DataFrame([outstandingShares[0]])
     df3 = pd.DataFrame([enterpriseValue[0]])
-    data = pd.concat([df1, df2, df3])
+    df4 = pd.DataFrame([incomeStatement[0]])
+    df5 = pd.DataFrame([currentPrice[0]])
+    data = pd.concat([df1, df2, df3, df4, df5])
     data.reset_index(drop=True, inplace=True)
 
     # Sourced from Stack Overflow
