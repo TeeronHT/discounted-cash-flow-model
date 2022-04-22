@@ -34,6 +34,42 @@ def pull_data(ticker):
     dt = open(ticker + "Data.json")
     return json.load(dt)
 
+def isolate_data(data):
+    metrics = {}
+    for key, value in data.items():
+        #print(key, ':', value)
+        if key == "ebitda":
+            for key, value in value.items():
+                if value != None:
+                    metrics["ebitda"] = value
+        elif key == "price":
+            for key, value in value.items():
+                if value != None:
+                    metrics["price"] = value
+        elif key == "operatingExpenses":
+            for key, value in value.items():
+                if value != None:
+                    metrics["operatingExpenses"] = value
+        elif key == "revenue":
+            for key, value in value.items():
+                if value != None:
+                    metrics["revenue"] = value
+        elif key == "enterpriseValue":
+            for key, value in value.items():
+                if value != None:
+                    metrics["enterpriseValue"] = value
+        elif key == "numberOfShares":
+            for key, value in value.items():
+                if value != None:
+                    metrics["numberOfShares"] = value
+    return metrics
+
+def computations(metrics):
+    computations{}
+    #NOPLAT = (Net Income + Tax + Interest + Non-Operating Gains/Losses) * (1 - (totalTaxExpenses/ebita))
+    #computations["NOPLAT"] = NOPLAT
+    return
+
 # Sourced from Financial Modeling Prep
 def get_jsonparsed_data(url):
     response = urlopen(url)
@@ -43,7 +79,8 @@ def get_jsonparsed_data(url):
 if __name__ == "__main__":
     ticker = input("Input ticker: ")
     data = pull_data(ticker)
-    for key, value in data.items():
+    metrics = isolate_data(data)
+    valuation = computations(metrics)
+
+    for key, value in metrics.items():
         print(key, ':', value)
-
-
