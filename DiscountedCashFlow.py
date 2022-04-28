@@ -18,10 +18,22 @@ the use of the initial DCF model and other metrics.
 
 '''
 
+# Imports
 import json
 from urllib.request import urlopen
 import pandas as pd
 
+# This is a constant metric calculated by subtracting the return rate of AA bonds by the inflation rate
+# Source: U.S. Department of the Treasury
+RISK_FREE_RATE_PER_ANNUM = 0.015
+
+# Source: U.S. Department of the Treasury
+EXPECTED_RETURN_OF_THE_MARKET_PER_ANNUM = 0.064
+
+# Source: U.S. Department of the Treasury
+AA_BOND_EFFECTIVE_YIELD = 0.0175
+
+# Call API and concatenate JSON files for current year data
 def pull_data(ticker):
     # Sourced from Financial Modeling Prep
     balanceSheetUrl = "https://financialmodelingprep.com/api/v3/balance-sheet-statement/" + ticker + "?limit=120&apikey=82e32bddd70d4deecdf507b9a13b2867"
@@ -32,12 +44,15 @@ def pull_data(ticker):
     enterpriseValue = get_jsonparsed_data(enterpriseValueUrl)
     incomeStatementURl = "https://financialmodelingprep.com/api/v3/income-statement/" + ticker + "?limit=120&apikey=82e32bddd70d4deecdf507b9a13b2867"
     incomeStatement = get_jsonparsed_data(incomeStatementURl)
+    profileURL = "https://financialmodelingprep.com/api/v3/profile/" + ticker + "?apikey=82e32bddd70d4deecdf507b9a13b2867"
+    profile = get_jsonparsed_data(profileURL)
 
     df1 = pd.DataFrame([balanceSheet[0]])
     df2 = pd.DataFrame([outstandingShares[0]])
     df3 = pd.DataFrame([enterpriseValue[0]])
     df4 = pd.DataFrame([incomeStatement[0]])
-    data = pd.concat([df1, df2, df3, df4])
+    df5 = pd.DataFrame([profile[0]])
+    data = pd.concat([df1, df2, df3, df4, df5])
     data.reset_index(drop=True, inplace=True)
 
     # Sourced from Stack Overflow
@@ -45,7 +60,8 @@ def pull_data(ticker):
     dt = open(ticker + "Data.json")
     return json.load(dt)
 
-def pull_data_prev_years(ticker):
+# Call API and concatenate JSON files for last year's data
+def pull_data_prev_year(ticker):
     # Sourced from Financial Modeling Prep
     balanceSheetUrl = "https://financialmodelingprep.com/api/v3/balance-sheet-statement/" + ticker + "?limit=120&apikey=82e32bddd70d4deecdf507b9a13b2867"
     balanceSheet = get_jsonparsed_data(balanceSheetUrl)
@@ -66,22 +82,6 @@ def pull_data_prev_years(ticker):
     data.to_json(ticker + "Data(YearPrev).json")
     dt = open(ticker + "Data(YearPrev).json")
     return json.load(dt)
-
-def isolate_data_prev_year(prevData):
-    prevMetrics = {}
-
-    # For year previous
-    for key, value in prevData.items():
-        if key == "totalCurrentAssets":
-            for key, value in value.items():
-                if value != None:
-                    prevMetrics["totalCurrentAssets"] = value
-        elif key == "totalCurrentLiabilities":
-            for key, value in value.items():
-                if value != None:
-                    prevMetrics["totalCurrentLiabilities"] = value
-
-    return prevMetrics
 
 def isolate_data(data):
     metrics = {}
@@ -108,10 +108,10 @@ def isolate_data(data):
             for key, value in value.items():
                 if value != None:
                     metrics["enterpriseValue"] = value
-        elif key == "numberOfShares":
+        elif key == "outstandingShares":
             for key, value in value.items():
                 if value != None:
-                    metrics["numberOfShares"] = value
+                    metrics["outstandingShares"] = value
         elif key == "incomeTaxExpense":
             for key, value in value.items():
                 if value != None:
@@ -124,14 +124,42 @@ def isolate_data(data):
             for key, value in value.items():
                 if value != None:
                     metrics["totalCurrentLiabilities"] = value
+        elif key == "beta":
+            for key, value in value.items():
+                if value != None:
+                    metrics["averageBeta"] = value
+        elif key == "longTermDebt":
+            for key, value in value.items():
+                if value != None:
+                    metrics["longTermDebt"] = value
 
-    '''
-    previousMetrics = isolate_data_prev_year(data)
-    combinedMetrics = metrics | previousMetrics
-    return combinedMetrics
-    '''
+    # This is a constant metric calculated by subtracting the return rate of AA bonds by the inflation rate
+    # Source: U.S. Department of the Treasury
+    metrics["riskFreeRatePerAnnum"] = RISK_FREE_RATE_PER_ANNUM
+
+    # Source: U.S. Department of the Treasury
+    metrics["expectedReturnOfTheMarketPerAnnum"] = EXPECTED_RETURN_OF_THE_MARKET_PER_ANNUM
+
+    # Source: U.S. Department of the Treasury
+    metrics["AABondEffectiveYield"] = AA_BOND_EFFECTIVE_YIELD
 
     return metrics
+
+def isolate_data_prev_year(prevData):
+    prevMetrics = {}
+
+    # For year previous
+    for key, value in prevData.items():
+        if key == "totalCurrentAssets":
+            for key, value in value.items():
+                if value != None:
+                    prevMetrics["totalCurrentAssets"] = value
+        elif key == "totalCurrentLiabilities":
+            for key, value in value.items():
+                if value != None:
+                    prevMetrics["totalCurrentLiabilities"] = value
+
+    return prevMetrics
 
 def computations(metrics, prevMetrics):
     computations = {}
@@ -145,14 +173,13 @@ def computations(metrics, prevMetrics):
     computations["investedCapital"] = investedCapital
     print("investedCapital :", str(computations["investedCapital"]))
 
-    # Review computations
-    investedCapitalPrevYear = (prevMetrics["totalCurrentAssets"] - prevMetrics["totalCurrentLiabilities"])
-    computations["investedCapitalPrevYear"] = investedCapitalPrevYear
-    print("investedCapitalPrevYear :", str(computations["investedCapitalPrevYear"]))
-
     investedCapitalOverRevenue = computations["investedCapital"] / metrics["revenue"]
     computations["investedCapitalOverRevenue"] = investedCapitalOverRevenue
     print("investedCapitalOverRevenue :", str(computations["investedCapitalOverRevenue"]))
+
+    investedCapitalPrevYear = (prevMetrics["totalCurrentAssets"] - prevMetrics["totalCurrentLiabilities"])
+    computations["investedCapitalPrevYear"] = investedCapitalPrevYear
+    print("investedCapitalPrevYear :", str(computations["investedCapitalPrevYear"]))
 
     newNetInvestment = computations["investedCapital"] - computations["investedCapitalPrevYear"]
     computations["newNetInvestment"] = newNetInvestment
@@ -162,10 +189,42 @@ def computations(metrics, prevMetrics):
     computations["operatingFreeCashFlow"] = operatingFreeCashFlow
     print("operatingFreeCashFlow :", str(computations["operatingFreeCashFlow"]))
 
+    leveredRate = (metrics["averageBeta"]) * (1 + (metrics["longTermDebt"] / metrics["marketCap"]))
+    computations["leveredRate"] = leveredRate
+    print("leveredRate :", str(computations["leveredRate"]))
+
+    averageBeta = ((computations["leveredRate"]) + (metrics["averageBeta"])) / 2
+    computations["averageBeta"] = averageBeta
+    print("averageBeta :", str(computations["averageBeta"]))
+
+    CAPM = metrics["riskFreeRatePerAnnum"] + computations["averageBeta"] * (metrics["expectedReturnOfTheMarketPerAnnum"] - metrics["riskFreeRatePerAnnum"])
+    computations["CAPM"] = CAPM
+    print("CAPM :", str(computations["CAPM"] * 100) + "%")
+
+    equityLinkedCostOfCapital = metrics["marketCap"] / (metrics["longTermDebt"] + metrics["marketCap"]) * computations["CAPM"]
+    computations["equityLinkedCostOfCapital"] = equityLinkedCostOfCapital
+    print("equityLinkedCostOfCapital :", str(computations["equityLinkedCostOfCapital"]))
+
+    debtLinkedCostOfCapital = metrics["longTermDebt"] / (metrics["longTermDebt"] + metrics["marketCap"]) * metrics["AABondEffectiveYield"] * (1 - metrics["incomeTaxExpense"] / metrics["ebitda"])
+    computations["debtLinkedCostOfCapital"] = debtLinkedCostOfCapital
+    print("debtLinkedCostOfCapital :", str(computations["debtLinkedCostOfCapital"]))
+
+    WACC = computations["debtLinkedCostOfCapital"] + computations["equityLinkedCostOfCapital"]
+    computations["WACC"] = WACC
+    print("WACC :", str(computations["WACC"]))
+
+    discountFactor = 1 / (1 + computations["WACC"])
+    computations["discountFactor"] = discountFactor
+    print("discountFactor :", str(computations["discountFactor"]))
+
+    discountedFreeCashFlow = computations["operatingFreeCashFlow"] * computations["discountFactor"]
+    computations["discountedFreeCashFlow"] = discountedFreeCashFlow
+    print("discountedFreeCashFlow :", str(computations["discountedFreeCashFlow"]))
+
     return computations
 
-# Sourced from Financial Modeling Prep
 def get_jsonparsed_data(url):
+    # Sourced from Financial Modeling Prep
     response = urlopen(url)
     data = response.read().decode("utf-8")
     return json.loads(data)
@@ -193,10 +252,11 @@ def compare(valuation, sharePrice):
 if __name__ == "__main__":
     ticker = input("Input ticker: ")
     data = pull_data(ticker)
-    prevData = pull_data_prev_years(ticker)
+    prevData = pull_data_prev_year(ticker)
     metrics = isolate_data(data)
+    sharePrice = share_price(ticker, metrics)
+    metrics["marketCap"] = sharePrice * metrics["outstandingShares"]
     prevMetrics = isolate_data_prev_year(prevData)
     computations = computations(metrics, prevMetrics)
     #valuation = valuation(computations())
-    sharePrice = share_price(ticker, metrics)
     #compare(valuation, sharePrice)
