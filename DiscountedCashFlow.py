@@ -86,6 +86,8 @@ def pull_data_prev_year(ticker):
 def isolate_data(data):
     metrics = {}
 
+    # Altenative way to do this: Create a dictionary and iterate through that to find the needed values. Would be a long dictionary though
+
     # For current year
     for key, value in data.items():
         if key == "date":
@@ -164,7 +166,6 @@ def isolate_data_prev_year(prevData):
 def computations(metrics, prevMetrics):
     computations = {}
 
-    # This value is inflated because I am using ebitda instead of ebita
     NOPLAT = (metrics["ebitda"]) * (1 - (metrics["incomeTaxExpense"] / metrics["ebitda"]))
     computations["NOPLAT"] = NOPLAT
     print("NOPLAT :", str(computations["NOPLAT"]))
@@ -199,7 +200,7 @@ def computations(metrics, prevMetrics):
 
     CAPM = metrics["riskFreeRatePerAnnum"] + computations["averageBeta"] * (metrics["expectedReturnOfTheMarketPerAnnum"] - metrics["riskFreeRatePerAnnum"])
     computations["CAPM"] = CAPM
-    print("CAPM :", str(computations["CAPM"] * 100) + "%")
+    print("CAPM :", str(computations["CAPM"]))
 
     equityLinkedCostOfCapital = metrics["marketCap"] / (metrics["longTermDebt"] + metrics["marketCap"]) * computations["CAPM"]
     computations["equityLinkedCostOfCapital"] = equityLinkedCostOfCapital
