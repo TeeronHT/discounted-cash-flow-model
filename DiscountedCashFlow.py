@@ -1,5 +1,6 @@
 '''
 Author: Teeron Hajebi Tabrizi
+Date: 05/10/2022
 
 Description:
 The aim of this program will be to calculate the expected value of a company’s shares
@@ -22,6 +23,7 @@ the use of the initial DCF model and other metrics.
 import json
 from urllib.request import urlopen
 import pandas as pd
+import matplotlib.pyplot as plt
 import math
 
 # This is a constant metric calculated by subtracting the return rate of AA bonds by the inflation rate
@@ -88,6 +90,7 @@ def pull_data_prev_year(ticker):
     dt = open(ticker + "Data(YearPrev).json")
     return json.load(dt)
 
+# Isolate the data from the combined JSON file created in the pull_data method
 def isolate_data(data):
     metrics = {}
 
@@ -156,6 +159,8 @@ def isolate_data(data):
             for key, value in value.items():
                 if value != None:
                     metrics["commercialPaper"] = value
+        else:
+            metrics["commercialPaper"] = 0
 
     # This is a constant metric calculated by subtracting the return rate of AA bonds by the inflation rate
     # Source: U.S. Department of the Treasury
@@ -169,6 +174,7 @@ def isolate_data(data):
 
     return metrics
 
+# Isolate the data from the combined JSON file created in the pull_data_prev_year method
 def isolate_data_prev_year(prevData):
     prevMetrics = {}
 
@@ -232,9 +238,11 @@ def isolate_data_prev_year(prevData):
 
     return prevMetrics
 
+# Method where all of my computations are done using the data extracted from the above methods
 def computations(metrics, prevMetrics):
     computations = {}
 
+    # Non Operating Profit Less Adjusted for Taxes
     NOPLAT = (metrics["ebitda"]) * (1 - (metrics["incomeTaxExpense"] / metrics["ebitda"]))
     computations["NOPLAT"] = NOPLAT
 
@@ -244,6 +252,7 @@ def computations(metrics, prevMetrics):
     investedCapitalOverRevenue = computations["investedCapital"] / metrics["revenue"]
     computations["investedCapitalOverRevenue"] = investedCapitalOverRevenue
 
+    # To find the invested capital of the previous year
     investedCapitalPrevYear = (prevMetrics["totalCurrentAssets"] - prevMetrics["totalCurrentLiabilities"])
     computations["investedCapitalPrevYear"] = investedCapitalPrevYear
 
@@ -253,9 +262,11 @@ def computations(metrics, prevMetrics):
     operatingFreeCashFlow = computations["NOPLAT"] - computations["newNetInvestment"]
     computations["operatingFreeCashFlow"] = operatingFreeCashFlow
 
+    # The levered rate is the internal rate of return of a string of cash flows with financing included
     leveredRate = (metrics["averageBeta"]) * (1 + (metrics["longTermDebt"] / metrics["marketCap"]))
     computations["leveredRate"] = leveredRate
 
+    # How a security/asset grows in relation to the overall market
     averageBeta = ((computations["leveredRate"]) + (metrics["averageBeta"])) / 2
     computations["averageBeta"] = averageBeta
 
@@ -277,34 +288,44 @@ def computations(metrics, prevMetrics):
     discountedFreeCashFlow = computations["operatingFreeCashFlow"] * computations["discountFactor"]
     computations["discountedFreeCashFlow"] = discountedFreeCashFlow
 
-    netEntepriseValue = abs(computations["discountedFreeCashFlow"] + future_discounted_free_cash_flow(metrics, projected_metrics(metrics, prevMetrics)))
+    # Multiply by 0.9 to account for overestimation as many companies had
+    # very profitable years during covid. The flip side is that some also
+    # had very rough years. These projections are incredibly rough
+    netEntepriseValue = abs(computations["discountedFreeCashFlow"] + future_discounted_free_cash_flow(metrics, projected_metrics(metrics, prevMetrics))) * 0.9
     computations["netEntepriseValue"] = netEntepriseValue
-    print(netEntepriseValue)
 
     # Value changes here for some reason when I take the absolute value of the netEnterpriseValue
     # Value of other non-operating assets, non-operating cash, and marketable securities
     VONOANOCMS = (metrics["cashAndCashEquivalents"] + metrics["otherNonCurrentAssets"] + metrics["otherCurrentAssets"])
     computations["VONOANOCMS"] = VONOANOCMS
-    print(VONOANOCMS)
 
     grossEnterpriseValue = computations["netEntepriseValue"] + computations["VONOANOCMS"]
     computations["grossEnterpriseValue"] = grossEnterpriseValue
-    print(grossEnterpriseValue)
 
-    debt = metrics["commercialPaper"] + metrics["longTermDebt"] / 10
+    # Generally under stated as many of the debt metrics
+    # are not part of GAAP (Generally Accepted Accounting Principles),
+    # making it difficult to calculate debt broadly
+    debt = (metrics["commercialPaper"] + metrics["longTermDebt"]) / 10
     computations["debt"] = debt
-    print(debt)
 
     totalValueOfCommonEquity= computations["grossEnterpriseValue"] - computations["debt"]
     computations["totalValueOfCommonEquity"] = totalValueOfCommonEquity
-    print(totalValueOfCommonEquity)
 
+    # This is where my value per share is computed. Given the above stated errors,
+    # it isn't entirely accurate. I believe if I had more time (if I wasn't sick), I could
+    # have made a web scraper myself that could take data off of the SEC's website to use
     DCFValuePerShare = computations["totalValueOfCommonEquity"] / metrics["outstandingShares"] * 10
     computations["DCFValuePerShare"] = DCFValuePerShare
-    print("DCFValuePerShare :", str(computations["DCFValuePerShare"]))
 
     return computations
 
+# Method where, using my previous data, I find the rate of change from last year to the year
+# my data is from, adding one to it, and multiplying that with my current year's data
+# to project for the next year. This is flawed given market volatility in 2021, so growth rates
+# are likely not sustainable, and losses will most probably not last too long. This just exacerbates
+# a single year's trend, making it not very useful. However, this is the best method without spending
+# $10,000 on the Bloomberg terminal or creating a neural network to predict my data.
+# This is also the reason why my program is not awfully accurate.
 def projected_metrics(metrics, prevMetrics):
     projectedMetrics = {}
 
@@ -317,6 +338,9 @@ def projected_metrics(metrics, prevMetrics):
                 1 + 1
     return projectedMetrics
 
+# Using the projected metrics and data from the current year, I calculate the discounted
+# free cash flow in the following years, which is integral to my final calculation. This is
+# where my inaccuracy begins.
 def future_discounted_free_cash_flow(prevMetrics, metrics):
     computations = {}
 
@@ -364,6 +388,7 @@ def future_discounted_free_cash_flow(prevMetrics, metrics):
 
     return discountedFreeCashFlow
 
+# Parse my data from JSON files. Taken from Financial Modelling Prep
 def get_jsonparsed_data(url):
     # Sourced from Financial Modeling Prep
     response = urlopen(url)
@@ -381,7 +406,7 @@ def share_price(ticker, metrics):
     # The range is between five days (+/-) of the income statement's release
     date = metrics["date"]
     dateRange = []
-    for i in range(-5,5):
+    for i in range(-10,10):
         dateRange.append(str(date[:7] + str(int(date[7:]) + i)))
 
     for key, value in sharePrice.items():
@@ -391,18 +416,86 @@ def share_price(ticker, metrics):
                     print("Value on", value[index]["date"], ":", value[index]["close"])
                     return value[index]["close"]
 
+# Compares my computed DCF share price to the actual share price on the date of the
+# release of the balance sheet.
 def compare(computations, sharePrice):
-    print("Actual Share Price :", sharePrice)
     print("Predicted Share Price :", computations["DCFValuePerShare"])
     print("Difference :", computations["DCFValuePerShare"] - sharePrice)
 
+# Creates a list comprised of all of the tickers of the companies in the NASDAQ 100.
+def ticker_list():
+    NASDAQListURL = "https://financialmodelingprep.com/api/v3/nasdaq_constituent?apikey=82e32bddd70d4deecdf507b9a13b2867"
+    NASDAQList = get_jsonparsed_data(NASDAQListURL)
+
+    tickerList = []
+
+    for index in range(len(NASDAQList)):
+        tickerList.append(NASDAQList[index]["symbol"])
+
+    return tickerList
+
 if __name__ == "__main__":
-    ticker = input("Input ticker: ")
-    data = pull_data(ticker)
-    prevData = pull_data_prev_year(ticker)
-    metrics = isolate_data(data)
-    sharePrice = share_price(ticker, metrics)
-    metrics["marketCap"] = sharePrice * metrics["outstandingShares"]
-    prevMetrics = isolate_data_prev_year(prevData)
-    computations = computations(metrics, prevMetrics)
-    compare(computations, sharePrice)
+
+    # Loop through tickers to find their DCF valuation disparity
+    userInput = False
+    if userInput == False:
+        tickerList = ticker_list()
+        companyData = {}
+        for ticker in tickerList:
+            try:
+                print(ticker)
+                data = pull_data(ticker)
+                prevData = pull_data_prev_year(ticker)
+                metrics = isolate_data(data)
+                sharePrice = share_price(ticker, metrics)
+                metrics["marketCap"] = sharePrice * metrics["outstandingShares"]
+                prevMetrics = isolate_data_prev_year(prevData)
+                computation = computations(metrics, prevMetrics)
+                compare(computation, sharePrice)
+                companyData[ticker] = computation["DCFValuePerShare"] - sharePrice
+            # Account for all possible errors because it will be difficult to make every
+            # possible company work.
+            except TypeError:
+                print("Not Computable With Given Data - TypeError")
+            except IndexError:
+                print("Not Computable With Given Data - IndexError")
+            except KeyError:
+                print("Not Computable With Given Data - KeyError")
+            except ValueError:
+                print("Not Computable With Given Data - ValueError")
+
+        companyData = dict(sorted(companyData.items(), key=lambda item: item[1]))
+        print("Median of Differences :", companyData[len(companyData)/2])
+
+        companySymbols = list(companyData.keys())
+        sharePriceDifference = list(companyData.values())
+
+        # Pulled from GeeksForGeeks
+        # (Poorly) Displays the tickers and disparity between DCF Price and actual.
+        fig, ax = plt.subplots(figsize=(16, 9))
+        ax.barh(companySymbols, sharePriceDifference)
+        for s in ['top', 'bottom', 'left', 'right']:
+            ax.spines[s].set_visible(False)
+        ax.xaxis.set_ticks_position('none')
+        ax.yaxis.set_ticks_position('none')
+        ax.xaxis.set_tick_params(pad=15)
+        ax.yaxis.set_tick_params(pad=20)
+        ax.grid(b=True, color='grey', linestyle='-.', linewidth=0.5, alpha=0.2)
+        ax.invert_yaxis()
+        for i in ax.patches:
+            plt.text(i.get_width() + 0.2, i.get_y() + 0.5, str(round((i.get_width()), 2)), fontsize=6, fontweight='bold', color='grey')
+        ax.set_title("Share Price Difference Per Company (NASDAQ)", loc="left", )
+        fig.text(0.9, 0.15, "Teeron Hajebi Tabrizi", fontsize=12, color="grey", ha="right", va="bottom", alpha=0.7)
+        plt.show()
+
+    # For a specific company. (User selected)
+    else:
+        ticker = input("Input ticker: ")
+        data = pull_data(ticker)
+        prevData = pull_data_prev_year(ticker)
+        metrics = isolate_data(data)
+        sharePrice = share_price(ticker, metrics)
+        metrics["marketCap"] = sharePrice * metrics["outstandingShares"]
+        prevMetrics = isolate_data_prev_year(prevData)
+        computations = computations(metrics, prevMetrics)
+        compare(computations, sharePrice)
