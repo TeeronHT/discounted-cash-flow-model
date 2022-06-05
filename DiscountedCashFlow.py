@@ -159,6 +159,10 @@ def isolate_data(data):
             for key, value in value.items():
                 if value != None:
                     metrics["commercialPaper"] = value
+        elif key == "netDebt":
+            for key, value in value.items():
+                if value != None:
+                    metrics["netDebt"] = value
         else:
             metrics["commercialPaper"] = 0
 
@@ -291,7 +295,7 @@ def computations(metrics, prevMetrics):
     # Multiply by 0.9 to account for overestimation as many companies had
     # very profitable years during covid. The flip side is that some also
     # had very rough years. These projections are incredibly rough
-    netEntepriseValue = abs(computations["discountedFreeCashFlow"] + future_discounted_free_cash_flow(metrics, projected_metrics(metrics, prevMetrics))) * 0.9
+    netEntepriseValue = abs(computations["discountedFreeCashFlow"] + future_discounted_free_cash_flow(metrics, projected_metrics(metrics, prevMetrics))) * 0.7
     computations["netEntepriseValue"] = netEntepriseValue
 
     # Value changes here for some reason when I take the absolute value of the netEnterpriseValue
@@ -305,7 +309,7 @@ def computations(metrics, prevMetrics):
     # Generally under stated as many of the debt metrics
     # are not part of GAAP (Generally Accepted Accounting Principles),
     # making it difficult to calculate debt broadly
-    debt = (metrics["commercialPaper"] + metrics["longTermDebt"]) / 10
+    debt = (metrics["commercialPaper"] + metrics["netDebt"]) / 10
     computations["debt"] = debt
 
     totalValueOfCommonEquity= computations["grossEnterpriseValue"] - computations["debt"]
@@ -437,7 +441,7 @@ def ticker_list():
 if __name__ == "__main__":
 
     # Loop through tickers to find their DCF valuation disparity
-    userInput = False
+    userInput = True
     if userInput == False:
         tickerList = ticker_list()
         companyData = {}
@@ -464,8 +468,7 @@ if __name__ == "__main__":
             except ValueError:
                 print("Not Computable With Given Data - ValueError")
 
-        companyData = dict(sorted(companyData.items(), key=lambda item: item[1]))
-        print("Median of Differences :", companyData[len(companyData)/2])
+        #companyData = dict(sorted(companyData.items(), key=lambda item: item[1]))
 
         companySymbols = list(companyData.keys())
         sharePriceDifference = list(companyData.values())
