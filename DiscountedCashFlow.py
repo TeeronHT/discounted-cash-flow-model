@@ -39,17 +39,17 @@ AA_BOND_EFFECTIVE_YIELD = 0.0175
 # Call API and concatenate JSON files for current year data
 def pull_data(ticker):
     # Sourced from Financial Modeling Prep
-    balanceSheetUrl = "https://financialmodelingprep.com/api/v3/balance-sheet-statement/" + ticker + "?limit=120&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    balanceSheetUrl = "https://financialmodelingprep.com/api/v3/balance-sheet-statement/" + ticker + "?limit=120&apikey=<API_KEY>"
     balanceSheet = get_jsonparsed_data(balanceSheetUrl)
-    outstandingSharesUrl = "https://financialmodelingprep.com/api/v4/shares_float?symbol=" + ticker + "&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    outstandingSharesUrl = "https://financialmodelingprep.com/api/v4/shares_float?symbol=" + ticker + "&apikey=<API_KEY>"
     outstandingShares = get_jsonparsed_data(outstandingSharesUrl)
-    enterpriseValueUrl = "https://financialmodelingprep.com/api/v3/enterprise-values/" + ticker + "?limit=40&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    enterpriseValueUrl = "https://financialmodelingprep.com/api/v3/enterprise-values/" + ticker + "?limit=40&apikey=<API_KEY>"
     enterpriseValue = get_jsonparsed_data(enterpriseValueUrl)
-    incomeStatementURl = "https://financialmodelingprep.com/api/v3/income-statement/" + ticker + "?limit=120&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    incomeStatementURl = "https://financialmodelingprep.com/api/v3/income-statement/" + ticker + "?limit=120&apikey=<API_KEY>"
     incomeStatement = get_jsonparsed_data(incomeStatementURl)
-    profileURL = "https://financialmodelingprep.com/api/v3/profile/" + ticker + "?apikey=82e32bddd70d4deecdf507b9a13b2867"
+    profileURL = "https://financialmodelingprep.com/api/v3/profile/" + ticker + "?apikey=<API_KEY>"
     profile = get_jsonparsed_data(profileURL)
-    reportedBSURl = "https://financialmodelingprep.com/api/v3/balance-sheet-statement-as-reported/" + ticker + "?limit=10&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    reportedBSURl = "https://financialmodelingprep.com/api/v3/balance-sheet-statement-as-reported/" + ticker + "?limit=10&apikey=<API_KEY>"
     reportedBS = get_jsonparsed_data(reportedBSURl)
 
     df1 = pd.DataFrame([balanceSheet[0]])
@@ -69,13 +69,13 @@ def pull_data(ticker):
 # Call API and concatenate JSON files for last year's data
 def pull_data_prev_year(ticker):
     # Sourced from Financial Modeling Prep
-    balanceSheetUrl = "https://financialmodelingprep.com/api/v3/balance-sheet-statement/" + ticker + "?limit=120&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    balanceSheetUrl = "https://financialmodelingprep.com/api/v3/balance-sheet-statement/" + ticker + "?limit=120&apikey=<API_KEY>"
     balanceSheet = get_jsonparsed_data(balanceSheetUrl)
-    enterpriseValueUrl = "https://financialmodelingprep.com/api/v3/enterprise-values/" + ticker + "?limit=40&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    enterpriseValueUrl = "https://financialmodelingprep.com/api/v3/enterprise-values/" + ticker + "?limit=40&apikey=<API_KEY>"
     enterpriseValue = get_jsonparsed_data(enterpriseValueUrl)
-    incomeStatementURl = "https://financialmodelingprep.com/api/v3/income-statement/" + ticker + "?limit=120&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    incomeStatementURl = "https://financialmodelingprep.com/api/v3/income-statement/" + ticker + "?limit=120&apikey=<API_KEY>"
     incomeStatement = get_jsonparsed_data(incomeStatementURl)
-    reportedBSURl = "https://financialmodelingprep.com/api/v3/balance-sheet-statement-as-reported/" + ticker + "?limit=10&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    reportedBSURl = "https://financialmodelingprep.com/api/v3/balance-sheet-statement-as-reported/" + ticker + "?limit=10&apikey=<API_KEY>"
     reportedBS = get_jsonparsed_data(reportedBSURl)
 
     df1 = pd.DataFrame([balanceSheet[1]])
@@ -403,7 +403,7 @@ def get_jsonparsed_data(url):
 # making it difficult to sift through along with the other returned files
 def share_price(ticker, metrics):
 
-    sharePriceURL = "https://financialmodelingprep.com/api/v3/historical-price-full/" + ticker + "?serietype=line&apikey=82e32bddd70d4deecdf507b9a13b2867"
+    sharePriceURL = "https://financialmodelingprep.com/api/v3/historical-price-full/" + ticker + "?serietype=line&apikey=<API_KEY>"
     sharePrice = get_jsonparsed_data(sharePriceURL)
 
     # Create a range of possible dates as the API doesn't have every single day
@@ -428,7 +428,7 @@ def compare(computations, sharePrice):
 
 # Creates a list comprised of all of the tickers of the companies in the NASDAQ 100.
 def ticker_list():
-    NASDAQListURL = "https://financialmodelingprep.com/api/v3/nasdaq_constituent?apikey=82e32bddd70d4deecdf507b9a13b2867"
+    NASDAQListURL = "https://financialmodelingprep.com/api/v3/nasdaq_constituent?apikey=<API_KEY>"
     NASDAQList = get_jsonparsed_data(NASDAQListURL)
 
     tickerList = []
